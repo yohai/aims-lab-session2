@@ -48,12 +48,14 @@ key & default & meaning \\
 \code{hidden} & \code{[512, 256]} & widths of the hidden layers; \code{[]} is a linear classifier \\
 \code{activation} & \code{"relu"} & \code{"relu"}, \code{"sigmoid"} or \code{"tanh"} \\
 \code{lr} & \code{0.05} & learning rate of plain SGD \\
+\code{weight\_decay} & \code{0.0} & $L_2$ penalty $\frac\lambda2\|\theta\|^2$ added to the loss (SGD's \code{weight\_decay}) \\
+\code{dropout} & \code{0.0} & dropout probability after each hidden activation; off at evaluation \\
 \code{batch\_size} & \code{128} & minibatch size \\
 \code{epochs} & \code{20} & passes over the training set \\
 \code{train\_fraction} & \code{1.0} & use only this fraction of the 45{,}000 training images \\
 \code{normalize} & \code{true} & standardize the pixels, or feed raw values $0..255$ \\
 \code{seed} & \code{0} & initialization and shuffling (the train/validation split never changes) \\
-\code{test} & \code{false} & also report test accuracy. \textbf{Once, at the end (E9)} \\
+\code{test} & \code{false} & also report test accuracy. \textbf{Once, at the end (E11)} \\
 \code{device} & \code{"cpu"} & \code{"cpu"}, \code{"cuda"}, \code{"mps"} or \code{"auto"} \\
 \bottomrule
 \end{tabular}
@@ -81,7 +83,7 @@ Times below are for a laptop CPU at $\approx1.5$\,s per epoch of the default net
 
 \section*{The experiments}
 \setcounter{exp}{-1}
-Do E0--E4 in class. E5--E9 are for home. Bring your tables and figures to session 3.
+Do E0--E4 in class. E5--E11 are for home. Bring your tables and figures to session 3.
 
 \begin{experiment}{Build the pipeline}{with your AI assistant, $\sim$15 min}
 Ask your assistant for a small tool that
@@ -142,6 +144,18 @@ Ask your assistant for a small tool that
 \run{\code{normalize} $=$ \code{false}, \code{lr} $\in\{0.05, 0.001, 0.00001\}$, 10 epochs; compare with the default.}
 \collect{training loss vs.\ epoch.}
 \answer{Why does raw-pixel input fail at the default learning rate? (The first layer's gradient is $\boldsymbol\delta^{(1)}\mathbf x^\top$.) The loss need not become \code{nan}: an explosion in epoch 1 followed by a flat $\ln 10\approx2.30$, chance level, is the same failure. Can a smaller learning rate alone fix it?}
+\end{experiment}
+
+\begin{experiment}{Weight decay}{$\sim$5 min}
+\run{\code{weight\_decay} $\in\{0, 10^{-4}, 10^{-3}, 10^{-2}\}$, 60 epochs (the $0$ run is E4).}
+\collect{validation loss vs.\ epoch and validation accuracy vs.\ epoch, all runs on one axis each; \code{max\_val\_acc} and \code{final\_train\_acc} vs.\ \code{weight\_decay} (log $x$; put $0$ at the left).}
+\answer{Does the validation loss still turn upward, and when? Which $\lambda$ underfits (training accuracy well below $100\%$)? Did the best validation accuracy move by more than E1's spread?}
+\end{experiment}
+
+\begin{experiment}{Dropout}{$\sim$3 min}
+\run{\code{dropout} $\in\{0, 0.2, 0.5\}$, 60 epochs (the $0$ run is E4).}
+\collect{training and validation accuracy vs.\ epoch, all runs on one axis.}
+\answer{What happens to the training accuracy, and to the gap between the two curves? Why is a dropout run's training curve noisier? (A different network every step; the training accuracy is measured with dropout on.) Did the validation accuracy improve by more than E1's spread?}
 \end{experiment}
 
 \begin{experiment}{Your best MLP}{open}

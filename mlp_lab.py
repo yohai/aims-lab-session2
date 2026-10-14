@@ -20,6 +20,8 @@ Hyperparameters (all optional; missing keys take the defaults below):
     hidden          list of hidden-layer widths, e.g. [512, 256]; [] is a linear classifier
     activation      "relu" | "sigmoid" | "tanh"
     lr              learning rate of plain SGD
+    weight_decay    L2 penalty: adds (weight_decay/2) * |theta|^2 to the loss (SGD's weight_decay)
+    dropout         dropout probability after each hidden activation (0 = none); off at evaluation
     batch_size      minibatch size
     epochs          passes over the training set
     train_fraction  use only this fraction of the 45,000 training images (validation set unchanged)
@@ -40,7 +42,8 @@ import torch, torch.nn as nn, torch.nn.functional as F
 from torch.utils.data import TensorDataset, Subset, random_split, DataLoader
 
 DEFAULTS = {
-    "hidden": [512, 256], "activation": "relu", "lr": 0.05, "batch_size": 128, "epochs": 20,
+    "hidden": [512, 256], "activation": "relu", "lr": 0.05, "weight_decay": 0.0, "dropout": 0.0,
+    "batch_size": 128, "epochs": 20,
     "train_fraction": 1.0, "normalize": True, "seed": 0, "test": False,
     "device": "cpu", "data_dir": "./data",
 }
@@ -70,8 +73,9 @@ def load_cifar10(data_dir="./data", normalize=True):
 
 # ---- model ------------------------------------------------------------------------
 class MLP(nn.Module):
-    def __init__(self, in_dim=3 * 32 * 32, hidden=(512, 256), n_classes=10, activation="relu"):
+    def __init__(self, in_dim=3 * 32 * 32, hidden=(512, 256), n_classes=10, activation="relu", dropout=0.0):
         super().__init__()
+        self.drop = nn.Dropout(dropout)               # identity when dropout == 0; off in eval mode
         dims = (in_dim, *hidden)
         self.layers = nn.ModuleList([nn.Linear(dims[i], dims[i + 1]) for i in range(len(dims) - 1)])
         self.out = nn.Linear(dims[-1], n_classes)
@@ -80,7 +84,7 @@ class MLP(nn.Module):
     def forward(self, x):
         x = x.flatten(1)                              # (B, 3, 32, 32) -> (B, 3072)
         for layer in self.layers:
-            x = self.phi(layer(x))
+            x = self.drop(self.phi(layer(x)))
         return self.out(x)                            # logits; the softmax lives inside the loss
 
 def evaluate(model, loader, device):
@@ -115,8 +119,8 @@ def train(config=None, verbose=True):
     train_loader = DataLoader(train_set, batch_size=cfg["batch_size"], shuffle=True)
     val_loader = DataLoader(val_set, batch_size=1000)
 
-    model = MLP(hidden=tuple(cfg["hidden"]), activation=cfg["activation"]).to(device)
-    optimizer = torch.optim.SGD(model.parameters(), lr=cfg["lr"])
+    model = MLP(hidden=tuple(cfg["hidden"]), activation=cfg["activation"], dropout=cfg["dropout"]).to(device)
+    optimizer = torch.optim.SGD(model.parameters(), lr=cfg["lr"], weight_decay=cfg["weight_decay"])
     loss_fn = nn.CrossEntropyLoss()                   # log-softmax + negative log-likelihood
     n_params = sum(q.numel() for q in model.parameters())
     if verbose:
