@@ -9,9 +9,12 @@ One function does everything: train(config) -> result.
 
 From the shell, a config file in, a result file out (both JSON):
 
-    uv run mlp_lab.py --download           # fetch CIFAR-10 (170 MB) into ./data; do this before class
-    uv run mlp_lab.py --show-defaults      # every hyperparameter and its default
-    uv run mlp_lab.py config.json result.json
+    python mlp_lab.py --download           # fetch CIFAR-10 (170 MB) into ./data; do this before class
+    python mlp_lab.py --show-defaults      # every hyperparameter and its default
+    python mlp_lab.py config.json result.json
+
+Needs Python >= 3.11 with the packages in requirements.txt (torch, torchvision, numpy, pandas,
+matplotlib). Install them however you like: pip, conda, uv ("uv run mlp_lab.py ..." installs them).
 
 Hyperparameters (all optional; missing keys take the defaults below):
     hidden          list of hidden-layer widths, e.g. [512, 256]; [] is a linear classifier
