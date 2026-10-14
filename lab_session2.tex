@@ -1,0 +1,154 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,booktabs,array,enumitem,xcolor,tcolorbox}
+\usepackage[colorlinks=true,urlcolor=blue!50!black,linkcolor=blue!50!black]{hyperref}
+\usepackage{fancyhdr}
+\definecolor{aiblue}{HTML}{1B3B6F}
+\pagestyle{fancy}\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\lhead{\small\textcolor{gray}{AI Methods for Science (77222)}}
+\rhead{\small\textcolor{gray}{Session 2 lab: an MLP on CIFAR-10}}
+\cfoot{\thepage}
+\setlist{nosep,leftmargin=1.4em}
+\setlength{\parindent}{0pt}\setlength{\parskip}{4pt}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newtcolorbox{rules}[1]{colback=aiblue!5,colframe=aiblue!70!black,boxrule=0.6pt,arc=1mm,
+  left=6pt,right=6pt,top=4pt,bottom=4pt,title={#1},fonttitle=\bfseries\small}
+\newcounter{exp}
+\newenvironment{experiment}[2]{\refstepcounter{exp}\par\medskip
+  \textbf{\textcolor{aiblue}{E\theexp.\ #1}}\hfill{\small\textcolor{gray}{#2}}\par}{\par}
+\newcommand{\run}[1]{\textbf{Run.} #1\par}
+\newcommand{\collect}[1]{\textbf{Collect.} #1\par}
+\newcommand{\answer}[1]{\textbf{Answer.} #1\par}
+
+\begin{document}
+\sloppy
+\begin{center}
+{\Large\bfseries Session 2 lab: training an MLP on CIFAR-10}\\[3pt]
+AI Methods for Science (77222) \quad·\quad Thursday 15 October 2026
+\end{center}
+
+\section*{The setup}
+You get a working network and a working training procedure: \code{mlp\_lab.py}. One function,
+\begin{center}\code{result = train(config)}\end{center}
+takes a dictionary of hyperparameters and returns a dictionary of measurements:
+\begin{itemize}
+  \item \code{result["history"]}: per epoch, \code{train\_loss}, \code{train\_acc}, \code{val\_loss}, \code{val\_acc}, \code{seconds};
+  \item \code{result["summary"]}: \code{n\_params}, \code{best\_epoch} (lowest validation loss), \code{val\_acc\_at\_best}, \code{max\_val\_acc}, final train/validation loss and accuracy, \code{sec\_per\_epoch}, \code{diverged}, and \code{test\_acc} if requested.
+\end{itemize}
+The hyperparameters, with defaults (\code{uv run mlp\_lab.py --show-defaults} prints them):
+\begin{center}\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+key & default & meaning \\
+\midrule
+\code{hidden} & \code{[512, 256]} & widths of the hidden layers; \code{[]} is a linear classifier \\
+\code{activation} & \code{"relu"} & \code{"relu"}, \code{"sigmoid"} or \code{"tanh"} \\
+\code{lr} & \code{0.05} & learning rate of plain SGD \\
+\code{batch\_size} & \code{128} & minibatch size \\
+\code{epochs} & \code{20} & passes over the training set \\
+\code{train\_fraction} & \code{1.0} & use only this fraction of the 45{,}000 training images \\
+\code{normalize} & \code{true} & standardize the pixels, or feed raw values $0..255$ \\
+\code{seed} & \code{0} & initialization and shuffling (the train/validation split never changes) \\
+\code{test} & \code{false} & also report test accuracy. \textbf{Once, at the end (E9)} \\
+\code{device} & \code{"cpu"} & \code{"cpu"}, \code{"cuda"}, \code{"mps"} or \code{"auto"} \\
+\bottomrule
+\end{tabular}
+\end{center}
+Your job is the \emph{experiments}: decide what to run, run it, collect the numbers, plot them, and explain what you see.
+
+\begin{rules}{Rules}
+\begin{itemize}
+  \item \textbf{Do not edit \code{mlp\_lab.py}.} Everyone runs the same network, so tables are comparable across the room.
+  \item \textbf{Use an AI assistant for the pipeline} (E0). Writing loops, file handling and plotting code is not the point of the lab.
+  \item \textbf{The numbers have to be yours}, measured on your machine. \textbf{The explanations have to be yours}: before each experiment, write one line saying what you expect; afterwards, say whether you were right and why.
+\end{itemize}
+\end{rules}
+
+\section*{Before class (at home, not in the classroom)}
+\begin{enumerate}
+  \item Install \code{uv}: \url{https://docs.astral.sh/uv/getting-started/installation/}.
+  \item Get the lab folder from the course repository (link on Moodle) and, inside it, run\\
+  \code{uv run mlp\_lab.py --download}\quad (installs PyTorch, downloads CIFAR-10, 170\,MB; the download can take half an hour on a slow connection)\\
+  \code{uv run python -c "import mlp\_lab; mlp\_lab.train(\{'epochs': 1\})"}\quad (one epoch, to check)
+  \item Colab works too: upload \code{mlp\_lab.py}, then \code{import mlp\_lab}.
+\end{enumerate}
+Times below are for a laptop CPU at $\approx1.5$\,s per epoch of the default network. Yours may be 2--3$\times$ slower. If so, cut the epochs and say so in your table.
+
+\section*{The experiments}
+\setcounter{exp}{-1}
+Do E0--E4 in class. E5--E9 are for home. Bring your tables and figures to session 3.
+
+\begin{experiment}{Build the pipeline}{with your AI assistant, $\sim$15 min}
+Ask your assistant for a small tool that
+\begin{enumerate}
+  \item takes a named experiment, i.e.\ a list of configs (e.g.\ a base config plus one hyperparameter swept over values);
+  \item runs \code{mlp\_lab.train} on each config and saves every result to disk (one JSON per run);
+  \item skips runs that are already saved, so an interrupted sweep can be resumed (key the saved file on the whole config, not on a name you type: a key that omits a hyperparameter returns an old run for a new config);
+  \item keeps a run whose loss became \code{nan} (its history then holds \code{None}): record it and show it, do not crash or drop it;
+  \item collects all runs into one table: config columns $+$ summary columns (a CSV or a pandas DataFrame);
+  \item plots (a) any \code{history} curve for several runs on one axis, and (b) any summary quantity against any hyperparameter.
+\end{enumerate}
+\answer{Check the pipeline against one run you did by hand: same seed, same numbers?}
+\end{experiment}
+
+\begin{experiment}{How big is the noise?}{$\sim$1.5 min}
+\run{the default config, \code{seed} $\in\{0,1,2\}$.}
+\collect{\code{val\_acc\_at\_best} and \code{max\_val\_acc} for each seed.}
+\answer{How much do they spread? From now on, which difference between two configs would you believe?}
+\end{experiment}
+
+\begin{experiment}{The learning rate}{$\sim$2 min}
+\run{\code{lr} $\in\{0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0\}$, 10 epochs.}
+\collect{training-loss curves of all runs on one axis (log $y$); validation accuracy vs.\ epoch, same runs; \code{max\_val\_acc} vs.\ \code{lr} (log $x$).}
+\answer{Label each run: crawls, works, noisy, diverges. The training loss is an average over the epoch and looks smooth; the noise shows in the validation curve. What is the largest learning rate that does not blow up? Where is the best one relative to it?}
+\end{experiment}
+
+\begin{experiment}{Width and depth}{$\sim$3 min}
+\run{\code{hidden} $\in$ \{\code{[]}, \code{[64]}, \code{[512]}, \code{[2048]}, \code{[512,256]}, \code{[1024,1024,1024]}, \code{[256]*6}\}, 15 epochs.}
+\collect{\code{n\_params}, \code{sec\_per\_epoch}, \code{val\_acc\_at\_best}, \code{final\_train\_acc}; plot the last two against \code{n\_params} (log $x$).}
+\answer{What does a linear classifier reach? Per parameter, does width or depth buy more? Is any difference you see larger than the seed spread of E1? If not, say so (or run three seeds for the two networks you want to compare). Does training accuracy predict validation accuracy?}
+\end{experiment}
+
+\begin{experiment}{Train for too long}{$\sim$1.5 min}
+\run{the default config, 60 epochs.}
+\collect{train and validation loss vs.\ epoch; train and validation accuracy vs.\ epoch.}
+\answer{At which epoch is the validation loss lowest? What happens to it afterwards, and to the validation \emph{accuracy}? Why can loss and accuracy disagree? Which of the two would you stop on?}
+\end{experiment}
+
+\begin{experiment}{Batch size}{$\sim$2 min}
+\run{\code{batch\_size} $\in\{16, 128, 1024\}$ at \code{lr} $=0.05$; then \code{batch\_size} $=1024$ at \code{lr} $=0.4$. 10 epochs.}
+\collect{validation accuracy against three different $x$-axes: epochs, gradient steps (\code{epoch}~$\times$~\code{steps\_per\_epoch}), and wall-clock seconds.}
+\answer{Which batch size wins? The answer depends on the $x$-axis: explain why. What did raising the learning rate for the large batch do?}
+\end{experiment}
+
+\begin{experiment}{How much data}{$\sim$5 min}
+\run{\code{train\_fraction} $\in\{0.01, 0.03, 0.1, 0.3, 1.0\}$ with \code{epochs} $=\min(400, \mathrm{round}(20/\text{fraction}))$, so that the runs take about the same number of gradient steps (the two smallest fractions hit the 400-epoch cap and get fewer steps; note it when you compare).}
+\collect{\code{max\_val\_acc} and \code{final\_train\_acc} vs.\ the number of training images (log $x$).}
+\answer{How does the gap between training and validation accuracy depend on the amount of data? Extrapolate: what would $10\times$ more data give?}
+\end{experiment}
+
+\begin{experiment}{Activation and depth}{$\sim$2 min}
+\run{\code{activation} $\in$ \{relu, sigmoid, tanh\} $\times$ \code{hidden} $\in$ \{\code{[256,256]}, \code{[256]*8}\}, 15 epochs.}
+\collect{training loss vs.\ epoch, all six runs on one axis.}
+\answer{Which combinations train slowly, or not at all? Explain it with Monday's slide on gradients through depth.}
+\end{experiment}
+
+\begin{experiment}{No normalization}{$\sim$1 min}
+\run{\code{normalize} $=$ \code{false}, \code{lr} $\in\{0.05, 0.001, 0.00001\}$, 10 epochs; compare with the default.}
+\collect{training loss vs.\ epoch.}
+\answer{Why does raw-pixel input fail at the default learning rate? (The first layer's gradient is $\boldsymbol\delta^{(1)}\mathbf x^\top$.) The loss need not become \code{nan}: an explosion in epoch 1 followed by a flat $\ln 10\approx2.30$, chance level, is the same failure. Can a smaller learning rate alone fix it?}
+\end{experiment}
+
+\begin{experiment}{Your best MLP}{open}
+Using only the hyperparameters above, find the config with the highest \code{val\_acc\_at\_best}. Choose it by validation accuracy only. Then run that one config \textbf{once} with \code{test = true} and report the test accuracy. The workshop target (sessions 5--6) is $54\%$ on the test set; with loss-based early stopping the validation number may stay just below it while \code{max\_val\_acc} is above. Report both, and say which epoch the test accuracy belongs to.\par
+\answer{Why is the test accuracy run once and not used to choose? Is your test accuracy above or below your validation accuracy, and is the difference within the noise of E1?}
+\end{experiment}
+
+\section*{What to bring}
+For each experiment: your one-line prediction, the table, the figure(s), and two or three sentences of explanation. In the last ten minutes of the session we compare tables across the room.
+
+\end{document}

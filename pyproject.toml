@@ -1,0 +1,6 @@
+[project]
+name = "aims-lab-session2"
+version = "0.1.0"
+description = "AI Methods for Science (77222), session 2 lab: an MLP on CIFAR-10"
+requires-python = ">=3.11"
+dependencies = ["torch", "torchvision", "numpy", "pandas", "matplotlib"]
