@@ -72,8 +72,8 @@ Your job is the \emph{experiments}: decide what to run, run it, collect the numb
 
 \section*{Set up}
 \begin{enumerate}
-  \item Get the lab folder from the course repository (link on Moodle).
-  \item You need Python $\ge3.11$ with the packages in \code{requirements.txt} (PyTorch, torchvision, numpy, pandas, matplotlib). Install them with whatever you use: \code{pip install -r requirements.txt} in a venv or conda environment, or \code{uv run mlp\_lab.py ...}, which installs them by itself. Ask your assistant if unsure.
+  \item Get the lab folder from the course repository 
+  \item You need Python $\ge3.11$ with the packages in \code{requirements.txt} (PyTorch, torchvision, numpy, pandas, matplotlib). Install them with whatever you use: \code{pip install -r requirements.txt} in a venv or conda environment, or \code{uv run mlp\_lab.py ...}, which installs them by itself. Ask your ai chatbot if unsure.
   \item Inside the folder, run\\
   \code{python mlp\_lab.py --download}\quad (downloads CIFAR-10, 170\,MB; can take half an hour on a slow connection)\\
   \code{python -c "import mlp\_lab; mlp\_lab.train(\{'epochs': 1\})"}\quad (one epoch, to check)
