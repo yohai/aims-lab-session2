@@ -27,11 +27,34 @@
 \begin{document}
 \sloppy
 \begin{center}
-{\Large\bfseries Session 2 lab: training an MLP on CIFAR-10}\\[3pt]
+{\Large\bfseries Session 2 labs: a first task, then an MLP on CIFAR-10}\\[3pt]
 AI Methods for Science (77222) \quad·\quad Thursday 15 October 2026
 \end{center}
 
-\section*{The setup}
+\section*{Part A: first task, fit a function (20 minutes, in class)}
+Write the whole thing yourself: model, loss, optimizer, training loop. No given code.
+
+\textbf{Data.} $n=200$ points, $x\sim U[0,1]$, $y=\sin(2\pi x)+\varepsilon$, $\varepsilon\sim\mathcal N(0,\sigma^2)$, $\sigma=0.25$. A test set: 200 fresh points from the same distribution.
+
+\textbf{Model and training.} MLP $1$--$64$--$64$--$1$ with \code{tanh}; \code{nn.MSELoss}; \code{torch.optim.Adam}, \code{lr=1e-2}; full batch; 2000 steps.
+\begin{enumerate}
+  \item Write the model (\code{nn.Sequential}), the loss, the optimizer and the five-line loop. Print the loss every 200 steps.
+  \item Plot the data, the true function and the fit.
+  \item Compute the train and the test MSE. Compare both with the noise floor $\sigma^2=0.0625$: which of the two can go below it, and what does it mean when it does?
+\end{enumerate}
+\textbf{Then try} (one line each in your report):
+\begin{itemize}
+  \item plain SGD and SGD with \code{momentum=0.9} instead of Adam, same number of steps;
+  \item hidden width 1 instead of 64;
+  \item 5000 steps instead of 2000;
+  \item $n=15$ training points and 5000 steps.
+\end{itemize}
+\textbf{Stretch.} Two interleaved spirals in 2D, two classes: MLP $2$--$64$--$64$--$2$ with ReLU, \code{nn.CrossEntropyLoss} on the logits, Adam. Plot the decision regions. Same loop; only the output dimension and the loss change.
+
+\textbf{Things that go wrong.} \code{x} of shape \code{(200,)} instead of \code{(200, 1)}; a target of shape \code{(200,)} against an output \code{(200, 1)} (\code{MSELoss} broadcasts to $200\times200$ and only warns); a missing \code{zero\_grad()}; storing \code{loss} instead of \code{loss.item()}.
+
+\section*{Part B: an MLP on CIFAR-10}
+\subsection*{The setup}
 You get a working network and a working training procedure: \code{mlp\_lab.py}. One function,
 \begin{center}\code{result = train(config)}\end{center}
 takes a dictionary of hyperparameters and returns a dictionary of measurements:
