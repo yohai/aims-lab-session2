@@ -1,0 +1,87 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,booktabs,array,enumitem,xcolor,tcolorbox}
+\usepackage[colorlinks=true,urlcolor=blue!50!black,linkcolor=blue!50!black]{hyperref}
+\usepackage{fancyhdr}
+\definecolor{aiblue}{HTML}{1B3B6F}
+\pagestyle{fancy}\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\lhead{\small\textcolor{gray}{AI Methods for Science (77222)}}
+\rhead{\small\textcolor{gray}{The CNN lab: E16--E19}}
+\cfoot{\thepage}
+\setlist{nosep,leftmargin=1.4em}
+\setlength{\parindent}{0pt}\setlength{\parskip}{4pt}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newtcolorbox{rules}[1]{colback=aiblue!5,colframe=aiblue!70!black,boxrule=0.6pt,arc=1mm,
+  left=6pt,right=6pt,top=4pt,bottom=4pt,title={#1},fonttitle=\bfseries\small}
+\newcounter{exp}
+\newenvironment{experiment}[2]{\refstepcounter{exp}\par\medskip
+  \textbf{\textcolor{aiblue}{E\theexp.\ #1}}\hfill{\small\textcolor{gray}{#2}}\par}{\par}
+\newcommand{\run}[1]{\textbf{Run.} #1\par}
+\newcommand{\collect}[1]{\textbf{Collect.} #1\par}
+\newcommand{\answer}[1]{\textbf{Answer.} #1\par}
+
+\begin{document}
+\sloppy
+\begin{center}
+{\Large\bfseries The CNN lab: a convolutional network on CIFAR-10, same loop}\\[3pt]
+AI Methods for Science (77222) \quad·\quad Part I, week 2; continues \code{lab\_mlp.pdf}
+\end{center}
+
+\section*{The setup}
+\code{cnn\_lab.py} (next to \code{mlp\_lab2.py}, which it imports) has the same \code{train(config)} interface and the same result format. Only the ansatz changed: a stack of blocks (conv $3\times3$ $\to$ BatchNorm $\to$ ReLU, then $2\times2$ max-pooling), global average pooling, one linear layer. The defaults are Monday's recipe applied to a small CNN. The new keys:
+\begin{center}\small
+\begin{tabular}{@{}llL{9.4cm}@{}}
+\toprule
+key & default & meaning \\
+\midrule
+\code{channels} & \code{[32, 64, 128]} & output channels of each block; \code{[]} gives the MLP of \code{lab\_mlp.pdf} (\code{hidden [512, 256]}) inside the same script \\
+\code{convs\_per\_block} & \code{1} & \code{2} puts two conv layers in every block (VGG-style) \\
+\code{kernel} & \code{3} & size of every conv kernel \\
+\code{batchnorm} & \code{true} & BatchNorm after every conv \\
+\code{shuffle\_pixels} & \code{false} & one fixed random permutation of the $3072$ pixels, applied to every image, training and validation alike \\
+\code{optimizer}, \code{lr}, \code{weight\_decay}, \code{schedule}, \code{augment}, \dots & AdamW, $10^{-3}$, $0.05$, cosine, true & as in \code{mlp\_lab2.py}; defaults are the E15 recipe \\
+\code{epochs} & \code{10} & \\
+\code{device} & \code{"auto"} & GPU (\code{cuda}) or Apple GPU (\code{mps}) if present, else CPU \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{rules}{Compute}
+A conv net costs more per epoch than the MLP. Default network, 352 steps: $\approx6$\,s per epoch on an Apple M-series GPU, $\approx20$\,s on an M5 CPU, $40$--$60$\,s on an older laptop CPU. \textbf{On a CPU, run 5 epochs instead of 10 and say so.} Do E16 first; if time is short, skip to E19 and do E17/E18 at home. Rules as before: do not edit the scripts; predict before each run; the test set once, in E19.
+\end{rules}
+
+\section*{The experiments}
+\setcounter{exp}{15}
+
+\begin{experiment}{A CNN against the MLP, and what it is that it knows}{$\sim$4 min on a GPU}
+\run{10 epochs each: (a) the default CNN; (b) \code{channels} $=$ \code{[]}, the MLP, under the same recipe; (c) the CNN with \code{shuffle\_pixels} $=$ \code{true}; (d) the MLP with \code{shuffle\_pixels} $=$ \code{true}.}
+\collect{validation accuracy vs.\ epoch, four runs on one axis; a table with \code{n\_params}, \code{val\_acc\_at\_best}, \code{sec\_per\_epoch}.}
+\answer{Before running: which of the four will be hurt by the shuffle, and by how much? Afterwards: the CNN has $18\times$ fewer parameters than the MLP. What does it know that the MLP does not? Why is the MLP unhurt by the shuffle? After the shuffle, is the CNN still better than the MLP, and why could it be?}
+\end{experiment}
+
+\begin{experiment}{Width and depth of the CNN}{$\sim$5 min on a GPU}
+\run{10 epochs: \code{channels} $\in\{$\code{[8,16,32]}, \code{[16,32,64]}, \code{[32,64,128]} (E16a), \code{[64,128,256]}$\}$; if you have a GPU, also \code{[64,128,256]} with \code{convs\_per\_block} $=2$.}
+\collect{\code{val\_acc\_at\_best} vs.\ \code{n\_params} (log $x$), with E16's MLP as one more point; \code{sec\_per\_epoch} in the table.}
+\answer{How many parameters does a CNN need to beat the $1.7$M-parameter MLP? Is the gain per parameter still rising at the top of your range? Where is the time going as the channels double (count the multiply-adds of one conv layer: $k^2\,C_{\rm in}\,C_{\rm out}\,H\,W$)?}
+\end{experiment}
+
+\begin{experiment}{Take things away}{$\sim$4 min on a GPU}
+\run{10 epochs, from the default: \code{batchnorm} $=$ \code{false}; \code{augment} $=$ \code{false}; \code{optimizer} $=$ \code{"sgd"} with \code{momentum} $0.9$, \code{lr} $=0.05$, \code{weight\_decay} $=5\times10^{-4}$ (the classic CNN recipe).}
+\collect{training and validation accuracy vs.\ epoch, the three and the default on one axis.}
+\answer{Which removal costs the most? Without augmentation, does the CNN overfit the way the MLP did in E4 (training $100\%$, validation loss rising)? Without BatchNorm, what happens in the first epochs, and does it recover? Does the classic SGD recipe match AdamW at 10 epochs?}
+\end{experiment}
+
+\begin{experiment}{Your best CNN, test once}{30 epochs; at home on a CPU}
+\run{the best architecture of E17 for 30 epochs. Choose by validation; then one run with \code{test} $=$ \code{true}.}
+\collect{training and validation accuracy and validation loss vs.\ epoch; the table row; the test number.}
+\answer{Where does the validation loss bottom out now, and does early stopping still matter with cosine $+$ augmentation? How far is your CNN from the best MLP of E15? Humans are at $\approx94\%$ on CIFAR-10 and the best published networks above $99\%$: name two things you would change next.}
+\end{experiment}
+
+\section*{The report}
+E16--E19 go into the same kind of report as E0--E15 (see \code{lab\_mlp.pdf}): prediction, table, figures, a few sentences each, one PDF per group, submitted as a GitHub issue on the lab repository (\emph{New issue} $\to$ \emph{Lab report}). Which experiments are done in class and which at home is announced in class. Our reference curves are shown next to yours.
+
+\end{document}

@@ -1,0 +1,27 @@
+name: Lab report
+description: Submit your group's session 2 lab report
+title: "Report: <group members>"
+labels: ["report"]
+body:
+  - type: input
+    id: members
+    attributes:
+      label: Group members
+      description: Full names, comma separated.
+      placeholder: Ada Lovelace, Emmy Noether
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Report
+      description: Drag and drop your report (PDF) here.
+      placeholder: Drop the PDF here.
+    validations:
+      required: true
+  - type: input
+    id: best
+    attributes:
+      label: Best config and test accuracy (optional)
+      description: The config with the highest val_acc_at_best, its test accuracy, and the epoch it belongs to.
+      placeholder: "lr=0.05, wd=5e-4, ...; test 54.1% at epoch 23"

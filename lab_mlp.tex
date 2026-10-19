@@ -9,7 +9,7 @@
 \pagestyle{fancy}\fancyhf{}
 \renewcommand{\headrulewidth}{0.4pt}
 \lhead{\small\textcolor{gray}{AI Methods for Science (77222)}}
-\rhead{\small\textcolor{gray}{Session 2 lab: an MLP on CIFAR-10}}
+\rhead{\small\textcolor{gray}{The MLP labs: E0--E15}}
 \cfoot{\thepage}
 \setlist{nosep,leftmargin=1.4em}
 \setlength{\parindent}{0pt}\setlength{\parskip}{4pt}
@@ -27,11 +27,11 @@
 \begin{document}
 \sloppy
 \begin{center}
-{\Large\bfseries Session 2 labs: a first task, then an MLP on CIFAR-10}\\[3pt]
-AI Methods for Science (77222) \quad·\quad Thursday 15 October 2026
+{\Large\bfseries The MLP labs: a first task, then an MLP on CIFAR-10, E0--E15}\\[3pt]
+AI Methods for Science (77222) \quad·\quad Part I, weeks 1--2
 \end{center}
 
-\section*{Part A: first task, fit a function (20 minutes, in class)}
+\section*{Part A: first task, fit a function (20 minutes)}
 Write the whole thing yourself: model, loss, optimizer, training loop. No given code.
 
 \textbf{Data.} $n=200$ points, $x\sim U[0,1]$, $y=\sin(2\pi x)+\varepsilon$, $\varepsilon\sim\mathcal N(0,\sigma^2)$, $\sigma=0.25$. A test set: 200 fresh points from the same distribution.
@@ -101,12 +101,12 @@ Your job is the \emph{experiments}: decide what to run, run it, collect the numb
   \code{python mlp\_lab.py --download}\quad (downloads CIFAR-10, 170\,MB; can take half an hour on a slow connection)\\
   \code{python -c "import mlp\_lab; mlp\_lab.train(\{'epochs': 1\})"}\quad (one epoch, to check)
 \end{enumerate}
-Bring a laptop with it working.
+Do the download at home, not in class, and bring a laptop with it working.
 Times below are for a laptop CPU at $\approx1.5$\,s per epoch of the default network. Yours may be 2--3$\times$ slower. If so, cut the epochs and say so in your table.
 
 \section*{The experiments}
 \setcounter{exp}{-1}
-We'll begin in class and finish athome. Summarize everything in a short report for session 3 with graphs (see the end of this sheet).
+Which experiments are done in class and which at home is announced in class; everything goes into one report (see the end of this sheet).
 
 \begin{experiment}{Build the pipeline}{with your AI assistant, $\sim$15 min}
 Ask your assistant for a small tool that
@@ -160,7 +160,7 @@ Ask your assistant for a small tool that
 \begin{experiment}{Activation and depth}{$\sim$2 min}
 \run{\code{activation} $\in$ \{relu, sigmoid, tanh\} $\times$ \code{hidden} $\in$ \{\code{[256,256]}, \code{[256]*8}\}, 15 epochs.}
 \collect{training loss vs.\ epoch, all six runs on one axis.}
-\answer{Which combinations train slowly, or not at all? Explain it with Monday's slide on gradients through depth.}
+\answer{Which combinations train slowly, or not at all? Explain it with the slide on gradients through depth (the backward pass is a product of one factor per layer).}
 \end{experiment}
 
 \begin{experiment}{No normalization}{$\sim$1 min}
@@ -186,7 +186,68 @@ Using only the hyperparameters above, find the config with the highest \code{val
 \answer{Why is the test accuracy run once and not used to choose? Is your test accuracy above or below your validation accuracy, and is the difference within the noise of E1?}
 \end{experiment}
 
+\section*{Part C: the same MLP, with the week-2 knobs}
+\subsection*{The setup}
+\code{mlp\_lab2.py} is \code{mlp\_lab.py} with new hyperparameters. Same function, same results format, same defaults: \code{train(\{\})} gives exactly the numbers of E1. Your pipeline from E0 works unchanged after \code{from mlp\_lab2 import train}. The new keys (\code{python mlp\_lab2.py --show-defaults} prints all of them):
+\begin{center}\small
+\begin{tabular}{@{}llL{9.2cm}@{}}
+\toprule
+key & default & meaning \\
+\midrule
+\code{optimizer} & \code{"sgd"} & \code{"sgd"}, \code{"adam"} or \code{"adamw"} \\
+\code{lr} & \code{0.05} & the (peak) learning rate. Plain SGD wants $\sim0.05$ here, momentum $0.9$ $\sim0.005$, Adam $\sim0.001$ \\
+\code{momentum} & \code{0.0} & SGD only: $v\leftarrow\beta v+g$, $\theta\leftarrow\theta-\eta v$ \\
+\code{nesterov} & \code{false} & SGD with momentum: the gradient is taken after the momentum step \\
+\code{weight\_decay} & \code{0.0} & $\lambda\theta$ added to the gradient (\code{sgd}, \code{adam}); decoupled decay $\theta\leftarrow(1-\eta\lambda)\theta$ (\code{adamw}) \\
+\code{schedule} & \code{"none"} & \code{"cosine"}: $\eta\to0$ over the run, per step; \code{"step"}: $\eta/10$ at 50\% and 75\% of the run \\
+\code{warmup\_epochs} & \code{0} & linear warmup of $\eta$ from $0$ over this many epochs \\
+\code{init} & \code{"default"} & \code{"default"} (PyTorch: $\mathrm{Var}\,W=1/3n_{\rm in}$), \code{"he"} ($2/n_{\rm in}$), \code{"xavier"} ($1/n_{\rm in}$) \\
+\code{batchnorm} & \code{false} & BatchNorm after every hidden linear layer, before the activation \\
+\code{dropout} & \code{0.0} & as in Part B \\
+\code{augment} & \code{false} & every training image: random crop (after padding by 4 pixels) and a horizontal flip with probability $1/2$, fresh every step \\
+\bottomrule
+\end{tabular}
+\end{center}
+\code{history} has one new entry, \code{lr}: the learning rate at the end of each epoch. Everything else (\code{hidden}, \code{activation}, \code{batch\_size}, \code{epochs}, \code{seed}, \code{test}, \dots) is as before.
+
+Copy \code{mlp\_lab2.py} into the same folder (same Python setup, same \code{./data}). Check:\\
+\code{python -c "import mlp\_lab2; mlp\_lab2.train(\{'epochs': 1, 'optimizer': 'adam', 'lr': 1e-3\})"}\\
+Adam costs about $1.5\times$ the time per epoch of plain SGD, augmentation about $2.5\times$.
+
+\subsection*{The experiments}
+Four experiments, about $8$ minutes of compute in total. Predict, run, look, explain.
+
+\begin{experiment}{Optimizers}{$\sim$2.5 min}
+\run{15 epochs each, default network: plain SGD at $\eta=0.05$ (the baseline); \code{momentum} $=0.9$ with $\eta=0.005$; \code{optimizer} $=$ \code{"adam"} with $\eta=10^{-4}$ and with $\eta=10^{-3}$.}
+\collect{training loss vs.\ epoch and validation accuracy vs.\ epoch, four runs on one axis each; a table with \code{val\_acc\_at\_best}, \code{max\_val\_acc}, \code{best\_epoch}, \code{final\_train\_loss}.}
+\answer{With momentum $\beta$ and a constant gradient the step is $\eta/(1-\beta)$: which run should match plain SGD at $0.05$, and does it? Which run drives the training loss down fastest, and what does its validation loss do meanwhile? Rank the four by \code{val\_acc\_at\_best}: is any difference larger than E1's spread?}
+\end{experiment}
+
+\begin{experiment}{Depth, fixed}{$\sim$2 min}
+\run{\code{hidden} $=$ \code{[256]*8}, 15 epochs, \code{activation} $\in\{$\code{"sigmoid"}, \code{"relu"}$\}$ $\times$ two fixes: \code{init} $=$ \code{"he"}, and \code{batchnorm} $=$ \code{true}. E7 (no fix) is the baseline.}
+\collect{training loss vs.\ epoch, the four runs and E7's two on one axis; \code{max\_val\_acc} in a table.}
+\answer{Which runs train now, and from which epoch? He initialization keeps the signal and the gradient of size $O(1)$ through ReLU layers; why does it not rescue the sigmoid network? What does BatchNorm do to the sigmoid network that an initialization cannot?}
+\end{experiment}
+
+\begin{experiment}{Data augmentation}{$\sim$2 min}
+\run{default network, 30 epochs, \code{augment} $=$ \code{true}. Compare with the first 30 epochs of E4 (same config without augmentation; rerun it at 30 epochs if you do not have E4).}
+\collect{training and validation accuracy vs.\ epoch, and validation loss vs.\ epoch, both runs on the same axes.}
+\answer{Does the validation loss still turn upward? The training accuracy no longer climbs to $100\%$: the network is the same, so what changed? How large is the gain in \code{val\_acc\_at\_best} compared with E1's spread, and compared with weight decay (E9) and dropout (E10)? Why is augmentation a statement about the \emph{data} rather than about the network?}
+\end{experiment}
+
+\begin{experiment}{Everything together, test once}{$\sim$3 min}
+\run{30 epochs with \code{schedule} $=$ \code{"cosine"} and \code{augment} $=$ \code{true}; two configs: (a) AdamW, $\eta=10^{-3}$, \code{weight\_decay} $=0.05$; (b) SGD with \code{momentum} $0.9$, $\eta=0.005$.}
+\collect{validation accuracy vs.\ epoch for both, with E14 on the same axis; the \code{lr} history of one run; a table: config, \code{val\_acc\_at\_best}, \code{max\_val\_acc}, \code{best\_epoch}, \code{final\_train\_acc}.}
+Choose the better config by validation accuracy only. Run it \textbf{once} more with \code{test = true} and report the test accuracy.\par
+\answer{Which epoch is the best one now, and why is that different from E4? How far above E11's test number are you, and what brought most of the gain: the optimizer (E12), the schedule, or the augmentation (E14)? The network is still an MLP on raw pixels. What limits it now? (The next lab.)}
+\end{experiment}
+
+
 \section*{The report}
-Summarize your results in a short report, in whatever format you like (a document, Markdown, \LaTeX, a notebook export). For each experiment: your one-line prediction, the table, the figure(s), and two or three sentences of explanation. Bring it to session 3 (Monday 19 October): selected groups will present their report to the class, so have it ready to put on the screen.% In the last ten minutes of today's session we compare the E1--E4 tables across the room.
+The sheet is worked through in order over two or three sessions: Part A; then Part B, E0--E4 in class and E5--E11 at home; then Part C (about 20 minutes of compute in all at $1.5$\,s/epoch). The exact split is announced in class and on Moodle.
+
+Summarize your results in one short report per group, as a PDF (from a document, Markdown, \LaTeX{} or a notebook export). For each experiment: your one-line prediction, the table, the figure(s), and two or three sentences of explanation.
+
+\textbf{Submit it as a GitHub issue} on the lab repository, one issue per group: \emph{New issue} $\to$ \emph{Lab report}, attach the PDF, fill in the group members and, if you have it, your best config with its test accuracy. Submissions are public, by design: at the session it is due we put the reports next to each other and next to our own reference curves, experiment by experiment, and selected groups present theirs. Have it ready to put on the screen.
 
 \end{document}
