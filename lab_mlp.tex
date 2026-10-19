@@ -95,7 +95,7 @@ Your job is the \emph{experiments}: decide what to run, run it, collect the numb
 
 \section*{Set up}
 \begin{enumerate}
-  \item Get the lab folder from the course repository 
+  \item Get the lab folder from the lab repository, \url{https://github.com/yohai/aims-lab-session2} (clone, or Code $\to$ Download ZIP).
   \item You need Python $\ge3.11$ with the packages in \code{requirements.txt} (PyTorch, torchvision, numpy, pandas, matplotlib). Install them with whatever you use: \code{pip install -r requirements.txt} in a venv or conda environment, or \code{uv run mlp\_lab.py ...}, which installs them by itself. Ask your ai chatbot if unsure.
   \item Inside the folder, run\\
   \code{python mlp\_lab.py --download}\quad (downloads CIFAR-10, 170\,MB; can take half an hour on a slow connection)\\
@@ -104,10 +104,17 @@ Your job is the \emph{experiments}: decide what to run, run it, collect the numb
 Do the download at home, not in class, and bring a laptop with it working.
 Times below are for a laptop CPU at $\approx1.5$\,s per epoch of the default network. Yours may be 2--3$\times$ slower. If so, cut the epochs and say so in your table.
 
+\section*{Reporting your results}
+Summarize your results in one short report per group, as a PDF (from a document, Markdown, \LaTeX{} or a notebook export). For each experiment: your one-line prediction, the table, the figure(s), and two or three sentences of explanation.
+
+\textbf{Submit it as a GitHub issue} on the lab repository, one issue per group: open\\
+\url{https://github.com/yohai/aims-lab-session2/issues/new/choose}\\
+choose \emph{Lab report}, attach the PDF, fill in the group members and your best config with its test accuracy. 
+
+Note that GitHub issues are public and will be visible to anyone on the internet. I will delete them when the course is over.
+
 \section*{The experiments}
 \setcounter{exp}{-1}
-Which experiments are done in class and which at home is announced in class; everything goes into one report (see the end of this sheet).
-
 \begin{experiment}{Build the pipeline}{with your AI assistant, $\sim$15 min}
 Ask your assistant for a small tool that
 \begin{enumerate}
@@ -242,12 +249,5 @@ Choose the better config by validation accuracy only. Run it \textbf{once} more 
 \answer{Which epoch is the best one now, and why is that different from E4? How far above E11's test number are you, and what brought most of the gain: the optimizer (E12), the schedule, or the augmentation (E14)? The network is still an MLP on raw pixels. What limits it now? (The next lab.)}
 \end{experiment}
 
-
-\section*{The report}
-The sheet is worked through in order over two or three sessions: Part A; then Part B, E0--E4 in class and E5--E11 at home; then Part C (about 20 minutes of compute in all at $1.5$\,s/epoch). The exact split is announced in class and on Moodle.
-
-Summarize your results in one short report per group, as a PDF (from a document, Markdown, \LaTeX{} or a notebook export). For each experiment: your one-line prediction, the table, the figure(s), and two or three sentences of explanation.
-
-\textbf{Submit it as a GitHub issue} on the lab repository, one issue per group: \emph{New issue} $\to$ \emph{Lab report}, attach the PDF, fill in the group members and, if you have it, your best config with its test accuracy. Submissions are public, by design: at the session it is due we put the reports next to each other and next to our own reference curves, experiment by experiment, and selected groups present theirs. Have it ready to put on the screen.
 
 \end{document}

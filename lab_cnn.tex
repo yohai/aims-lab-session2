@@ -32,7 +32,7 @@ AI Methods for Science (77222) \quad·\quad Part I, week 2; continues \code{lab\
 \end{center}
 
 \section*{The setup}
-\code{cnn\_lab.py} (next to \code{mlp\_lab2.py}, which it imports) has the same \code{train(config)} interface and the same result format. Only the ansatz changed: a stack of blocks (conv $3\times3$ $\to$ BatchNorm $\to$ ReLU, then $2\times2$ max-pooling), global average pooling, one linear layer. The defaults are Monday's recipe applied to a small CNN. The new keys:
+\code{cnn\_lab.py} (from \url{https://github.com/yohai/aims-lab-session2}; next to \code{mlp\_lab2.py}, which it imports) has the same \code{train(config)} interface and the same result format. Only the ansatz changed: a stack of blocks (conv $3\times3$ $\to$ BatchNorm $\to$ ReLU, then $2\times2$ max-pooling), global average pooling, one linear layer. The defaults are Monday's recipe applied to a small CNN. The new keys:
 \begin{center}\small
 \begin{tabular}{@{}llL{9.4cm}@{}}
 \toprule
@@ -53,6 +53,9 @@ key & default & meaning \\
 \begin{rules}{Compute}
 A conv net costs more per epoch than the MLP. Default network, 352 steps: $\approx6$\,s per epoch on an Apple M-series GPU, $\approx20$\,s on an M5 CPU, $40$--$60$\,s on an older laptop CPU. \textbf{On a CPU, run 5 epochs instead of 10 and say so.} Do E16 first; if time is short, skip to E19 and do E17/E18 at home. Rules as before: do not edit the scripts; predict before each run; the test set once, in E19.
 \end{rules}
+
+\section*{The report}
+E16--E19 go into the same kind of report as E0--E15 (see \code{lab\_mlp.pdf}): prediction, table, figures, a few sentences each, one PDF per group, submitted as a GitHub issue on the lab repository: \url{https://github.com/yohai/aims-lab-session2/issues/new/choose}, \emph{Lab report}. Which experiments are done in class and which at home is announced in class. Our reference curves are shown next to yours.
 
 \section*{The experiments}
 \setcounter{exp}{15}
@@ -80,8 +83,5 @@ A conv net costs more per epoch than the MLP. Default network, 352 steps: $\appr
 \collect{training and validation accuracy and validation loss vs.\ epoch; the table row; the test number.}
 \answer{Where does the validation loss bottom out now, and does early stopping still matter with cosine $+$ augmentation? How far is your CNN from the best MLP of E15? Humans are at $\approx94\%$ on CIFAR-10 and the best published networks above $99\%$: name two things you would change next.}
 \end{experiment}
-
-\section*{The report}
-E16--E19 go into the same kind of report as E0--E15 (see \code{lab\_mlp.pdf}): prediction, table, figures, a few sentences each, one PDF per group, submitted as a GitHub issue on the lab repository (\emph{New issue} $\to$ \emph{Lab report}). Which experiments are done in class and which at home is announced in class. Our reference curves are shown next to yours.
 
 \end{document}
