@@ -34,7 +34,7 @@ AI Methods for Science (77222) \quad·\quad Part I, week 2; continues \code{lab\
 \section*{The setup}
 \code{cnn\_lab.py} (from \url{https://github.com/yohai/aims-lab-session2}; next to \code{mlp\_lab2.py}, which it imports) has the same \code{train(config)} interface and the same result format. Only the ansatz changed: a stack of blocks (conv $3\times3$ $\to$ BatchNorm $\to$ ReLU, then $2\times2$ max-pooling), global average pooling, one linear layer. The defaults are Monday's recipe applied to a small CNN. The new keys:
 \begin{center}\small
-\begin{tabular}{@{}llL{9.4cm}@{}}
+\begin{tabular}{@{}L{3.9cm}L{2.9cm}L{9.4cm}@{}}
 \toprule
 key & default & meaning \\
 \midrule
