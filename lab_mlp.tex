@@ -204,7 +204,6 @@ key & default & meaning \\
 \code{optimizer} & \code{"sgd"} & \code{"sgd"}, \code{"adam"} or \code{"adamw"} \\
 \code{lr} & \code{0.05} & the (peak) learning rate. Plain SGD wants $\sim0.05$ here, momentum $0.9$ $\sim0.005$, Adam $\sim0.001$ \\
 \code{momentum} & \code{0.0} & SGD only: $v\leftarrow\beta v+g$, $\theta\leftarrow\theta-\eta v$ \\
-\code{nesterov} & \code{false} & SGD with momentum: the gradient is taken after the momentum step \\
 \code{weight\_decay} & \code{0.0} & $\lambda\theta$ added to the gradient (\code{sgd}, \code{adam}); decoupled decay $\theta\leftarrow(1-\eta\lambda)\theta$ (\code{adamw}) \\
 \code{schedule} & \code{"none"} & \code{"cosine"}: $\eta\to0$ over the run, per step; \code{"step"}: $\eta/10$ at 50\% and 75\% of the run \\
 \code{warmup\_epochs} & \code{0} & linear warmup of $\eta$ from $0$ over this many epochs \\
