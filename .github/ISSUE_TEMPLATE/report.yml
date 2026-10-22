@@ -1,5 +1,5 @@
 name: Lab report
-description: Submit your group's session 2 lab report
+description: Submit your group's lab report
 title: "Report: <group members>"
 labels: ["report"]
 body:
