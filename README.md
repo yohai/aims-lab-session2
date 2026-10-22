@@ -4,7 +4,7 @@ This is the repo for Yohai's part of the course: weeks 1–4, deep learning foun
 
 ## Slides
 
-The decks as shown in class are in [`slides/`](slides/), one PDF per session, numbered in order. If a session's deck is missing, it will be there within a day.
+The decks as shown in class are in [`slides/`](slides/), one PDF per lecture, numbered from 0. If a session's deck is missing, it will be there within a day.
 
 ## Setup
 
