@@ -47,3 +47,9 @@ Do not edit the scripts.
 ## Submitting the report
 
 One issue per group: open [New issue](../../issues/new/choose), choose **Lab report**, attach your report and fill in the form. Submitted reports are public; that is intended: at the session they are due we put them next to each other and next to our reference curves.
+
+## Slides
+
+`slides/` holds the decks as shown in class, updated after each session:
+`01_everything_is_optimization.pdf` (Mon 12 Oct), `02_training_in_practice.pdf` (Thu 15 Oct),
+`03_two_failure_modes.pdf` (Mon 19 and Thu 22 Oct), `04_your_reports_E0-E8.pdf` (Thu 22 Oct, your reports).
