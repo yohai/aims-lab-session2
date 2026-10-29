@@ -9,7 +9,7 @@
 \pagestyle{fancy}\fancyhf{}
 \renewcommand{\headrulewidth}{0.4pt}
 \lhead{\small\textcolor{gray}{AI Methods for Science (77222)}}
-\rhead{\small\textcolor{gray}{The CNN lab: E16--E19}}
+\rhead{\small\textcolor{gray}{The CNN lab: E16--E22}}
 \cfoot{\thepage}
 \setlist{nosep,leftmargin=1.4em}
 \setlength{\parindent}{0pt}\setlength{\parskip}{4pt}
@@ -23,6 +23,7 @@
 \newcommand{\run}[1]{\textbf{Run.} #1\par}
 \newcommand{\collect}[1]{\textbf{Collect.} #1\par}
 \newcommand{\answer}[1]{\textbf{Answer.} #1\par}
+\newcommand{\heavy}[1]{\textcolor{gray!70!black}{\textbf{Compute.} #1}\par}
 
 \begin{document}
 \sloppy
@@ -32,7 +33,7 @@ AI Methods for Science (77222) \quad·\quad Part I, week 2; continues \code{lab\
 \end{center}
 
 \section*{The setup}
-\code{cnn\_lab.py} (from \url{https://github.com/yohai/aims-lab-session2}; next to \code{mlp\_lab2.py}, which it imports) has the same \code{train(config)} interface and the same result format. Only the ansatz changed: a stack of blocks (conv $3\times3$ $\to$ BatchNorm $\to$ ReLU, then $2\times2$ max-pooling), global average pooling, one linear layer. The defaults are Monday's recipe applied to a small CNN. The new keys:
+\code{cnn\_lab.py} (from \url{https://github.com/yohai/aims-lab-session2}; next to \code{mlp\_lab2.py}, which it imports) has the same \code{train(config)} interface and the same result format (plus \code{result["model"]}, the trained network). Only the ansatz changed: a stack of blocks (conv $3\times3$ $\to$ BatchNorm $\to$ ReLU, then $2\times2$ max-pooling), global average pooling, one linear layer. The defaults are Monday's recipe applied to a small CNN. The new keys:
 \begin{center}\small
 \begin{tabular}{@{}L{3.9cm}L{2.9cm}L{9.4cm}@{}}
 \toprule
@@ -43,6 +44,11 @@ key & default & meaning \\
 \code{kernel} & \code{3} & size of every conv kernel \\
 \code{batchnorm} & \code{true} & BatchNorm after every conv \\
 \code{shuffle\_pixels} & \code{false} & one fixed random permutation of the $3072$ pixels, applied to every image, training and validation alike \\
+\code{skip} & \code{false} & a skip connection around every conv: ResNet's residual units (E22) \\
+\code{classes} & \code{[]} & which of the ten classes to use, e.g.\ \code{[0,1,2,3,4]}; labels renumbered $0..K-1$ (E20) \\
+\code{n\_per\_class} & \code{0} & keep only this many training images per class; \code{0} = all (E20) \\
+\code{save\_weights} & \code{""} & a path; the weights of the best epoch are saved there after training (E20) \\
+\code{init\_from}, \code{freeze} & \code{""}, \code{false} & start the conv blocks from saved weights, with a new linear head; \code{freeze} trains the head only (E20) \\
 \code{optimizer}, \code{lr}, \code{weight\_decay}, \code{schedule}, \code{augment}, \dots & AdamW, $10^{-3}$, $0.05$, cosine, true & as in \code{mlp\_lab2.py}; defaults are the E15 recipe \\
 \code{epochs} & \code{10} & \\
 \code{device} & \code{"auto"} & GPU (\code{cuda}) or Apple GPU (\code{mps}) if present, else CPU \\
@@ -51,11 +57,11 @@ key & default & meaning \\
 \end{center}
 
 \begin{rules}{Compute}
-A conv net costs more per epoch than the MLP. Default network, 352 steps: $\approx6$\,s per epoch on an Apple M-series GPU, $\approx20$\,s on an M5 CPU, $40$--$60$\,s on an older laptop CPU. \textbf{On a CPU, run 5 epochs instead of 10 and say so.} Do E16 first; if time is short, skip to E19 and do E17/E18 at home. Rules as before: do not edit the scripts; predict before each run; the test set once, in E19.
+A conv net costs more per epoch than the MLP. Default network, 352 steps: $\approx6$\,s per epoch on an Apple M-series GPU, $\approx20$\,s on an M5 CPU, $40$--$60$\,s on an older laptop CPU. \textbf{On a CPU, run 5 epochs instead of 10 and say so.} Do E16 first; if time is short, skip to E18 and do E17 at home. E20 starts in class on Thursday; E19, E20, E21 and E22 are the homework after it (\code{eurosat\_lab.py}; run \code{python eurosat\_lab.py --download} at home first). Rules as before: do not edit the scripts; predict before each run; the test set once, in E18.
 \end{rules}
 
 \section*{The report}
-E16--E19 go into the same kind of report as E0--E15 (see \code{lab\_mlp.pdf}): prediction, table, figures, a few sentences each, one PDF per group, submitted as a GitHub issue on the lab repository: \url{https://github.com/yohai/aims-lab-session2/issues/new/choose}, \emph{Lab report}. Which experiments are done in class and which at home is announced in class. Our reference curves are shown next to yours.
+E16--E22 go into the same kind of report as E0--E15 (see \code{lab\_mlp.pdf}): prediction, table, figures, a few sentences each, one PDF per group, submitted as a GitHub issue on the lab repository: \url{https://github.com/yohai/aims-lab-session2/issues/new/choose}, \emph{Lab report}. Which experiments are done in class and which at home is announced in class. Our reference curves are shown next to yours.
 
 \section*{The experiments}
 \setcounter{exp}{15}
@@ -63,25 +69,67 @@ E16--E19 go into the same kind of report as E0--E15 (see \code{lab\_mlp.pdf}): p
 \begin{experiment}{A CNN against the MLP, and what it is that it knows}{$\sim$4 min on a GPU}
 \run{10 epochs each: (a) the default CNN; (b) \code{channels} $=$ \code{[]}, the MLP, under the same recipe; (c) the CNN with \code{shuffle\_pixels} $=$ \code{true}; (d) the MLP with \code{shuffle\_pixels} $=$ \code{true}.}
 \collect{validation accuracy vs.\ epoch, four runs on one axis; a table with \code{n\_params}, \code{val\_acc\_at\_best}, \code{sec\_per\_epoch}.}
+\heavy{Four runs of 10 epochs: $\approx4$ min on an Apple GPU; on an M5 CPU the two CNN runs cost $\approx20$\,s per epoch, the two MLP runs seconds, so 5 epochs each, $\approx4$ min in all.}
 \answer{Before running: which of the four will be hurt by the shuffle, and by how much? Afterwards: the CNN has $18\times$ fewer parameters than the MLP. What does it know that the MLP does not? Why is the MLP unhurt by the shuffle? After the shuffle, is the CNN still better than the MLP, and why could it be?}
 \end{experiment}
 
 \begin{experiment}{Width and depth of the CNN}{$\sim$5 min on a GPU}
 \run{10 epochs: \code{channels} $\in\{$\code{[8,16,32]}, \code{[16,32,64]}, \code{[32,64,128]} (E16a), \code{[64,128,256]}$\}$; if you have a GPU, also \code{[64,128,256]} with \code{convs\_per\_block} $=2$.}
 \collect{\code{val\_acc\_at\_best} vs.\ \code{n\_params} (log $x$), with E16's MLP as one more point; \code{sec\_per\_epoch} in the table.}
+\heavy{The cost grows with the channels: \code{[8,16,32]} and \code{[16,32,64]} are cheaper than the default; \code{[64,128,256]} is $\approx4\times$ the default ($10$\,s per epoch on an Apple GPU, $\approx80$\,s on an M5 CPU); the two-convs version is $\approx12\times$ ($25$\,s per epoch on the GPU, minutes on a CPU): GPU only. On a CPU: the three small configurations at 5 epochs, \code{[64,128,256]} at 3.}
 \answer{How many parameters does a CNN need to beat the $1.7$M-parameter MLP? Is the gain per parameter still rising at the top of your range? Where is the time going as the channels double (count the multiply-adds of one conv layer: $k^2\,C_{\rm in}\,C_{\rm out}\,H\,W$)?}
-\end{experiment}
-
-\begin{experiment}{Take things away}{$\sim$4 min on a GPU}
-\run{10 epochs, from the default: \code{batchnorm} $=$ \code{false}; \code{augment} $=$ \code{false}; \code{optimizer} $=$ \code{"sgd"} with \code{momentum} $0.9$, \code{lr} $=0.05$, \code{weight\_decay} $=5\times10^{-4}$ (the classic CNN recipe).}
-\collect{training and validation accuracy vs.\ epoch, the three and the default on one axis.}
-\answer{Which removal costs the most? Without augmentation, does the CNN overfit the way the MLP did in E4 (training $100\%$, validation loss rising)? Without BatchNorm, what happens in the first epochs, and does it recover? Does the classic SGD recipe match AdamW at 10 epochs?}
 \end{experiment}
 
 \begin{experiment}{Your best CNN, test once}{30 epochs; at home on a CPU}
 \run{the best architecture of E17 for 30 epochs. Choose by validation; then one run with \code{test} $=$ \code{true}.}
 \collect{training and validation accuracy and validation loss vs.\ epoch; the table row; the test number.}
+\heavy{30 epochs of the default net: $\approx3$ min on an Apple GPU, $\approx10$ min on an M5 CPU, longer on an older laptop; of \code{[64,128,256]}: $5$ min and $40$ min. The two-convs version at 30 epochs is a GPU-only run ($\approx12$ min). Start it, go for lunch.}
 \answer{Where does the validation loss bottom out now, and does early stopping still matter with cosine $+$ augmentation? How far is your CNN from the best MLP of E15? Humans are at $\approx94\%$ on CIFAR-10 and the best published networks above $99\%$: name two things you would change next.}
+\end{experiment}
+
+\begin{experiment}{Take things away (at home)}{$\sim$4 min on a GPU}
+\run{10 epochs, from the default: \code{batchnorm} $=$ \code{false}; \code{augment} $=$ \code{false}; \code{optimizer} $=$ \code{"sgd"} with \code{momentum} $0.9$, \code{lr} $=0.05$, \code{weight\_decay} $=5\times10^{-4}$ (the classic CNN recipe).}
+\collect{training and validation accuracy vs.\ epoch, the three and the default on one axis.}
+\heavy{Three runs of 10 epochs at the default cost: $\approx3$ min on a GPU, $\approx10$ min on an M5 CPU at 10 epochs, half at 5.}
+\answer{Which removal costs the most? Without augmentation, does the CNN overfit the way the MLP did in E4 (training $100\%$, validation loss rising)? Without BatchNorm, what happens in the first epochs, and does it recover? Does the classic SGD recipe match AdamW at 10 epochs?}
+\end{experiment}
+
+\begin{experiment}{What does a trained network know about classes it never saw?}{$\sim$1 min on a GPU, 5 on a CPU}
+\run{(a) pretrain: \code{classes} $=$ \code{[0,1,2,3,4]} (plane, car, bird, cat, deer), 10 epochs, \code{save\_weights} $=$ \code{"pre.pt"}. Then the other five classes, $B=$ \code{[5,6,7,8,9]} (dog, frog, horse, ship, truck), with \code{n\_per\_class} $\in\{10, 100, 1000\}$, four ways: (b) \textbf{no training}: \code{nearest\_mean("pre.pt", B, n)}, which pushes the images through the frozen conv blocks, takes the mean feature vector of each class over its $n$ labelled images, and assigns each validation image to the nearest mean; (c) \textbf{head only}: \code{init\_from} $=$ \code{"pre.pt"}, \code{freeze} $=$ \code{true}, and the head's own recipe, \code{lr} $=0.01$, \code{batch\_size} $=32$, \code{epochs} $=100$, \code{augment} $=$ \code{false}; (d) \textbf{fine-tune}: \code{init\_from} $=$ \code{"pre.pt"}, no freeze, 10 epochs; (e) \textbf{from scratch}, 10 epochs.}
+\collect{validation accuracy vs.\ the number of labelled images ($50$, $500$, $5000$; log $x$), four curves on one axis; \code{n\_params} (the trainable ones) in the table.}
+\heavy{Pretraining on five classes: $\approx30$\,s on a GPU, $\approx2$ min on an M5 CPU (half the images). Everything else is on $50$--$5{,}000$ images: seconds each, except the $100$-epoch head runs ($\approx15$\,s each). Nearest mean: seconds. Whole experiment $\approx1$ min on a GPU, $\approx5$ min on a CPU.}
+\answer{Before running: with $50$ images, rank the four, and say by how much (b) beats or loses to (e). Afterwards: the pretraining never saw a dog or a ship, and (b) trains nothing; what did the conv blocks learn that works on dogs? Why does the frozen head need a different learning rate and many more epochs than the default (count its gradient steps under the default)? Where do the curves cross, and what would you do with $50$ labelled images of your own?}
+\end{experiment}
+
+\section*{E21: transfer learning on EuroSAT (homework)}
+EuroSAT (Helber et al.\ 2019): $27{,}000$ Sentinel-2 satellite patches, $64\times64$ RGB, 10 land-use classes (crop, forest, highway, industrial, pasture, residential, river, sea/lake, \dots). \code{eurosat\_lab.py} loads it with a fixed split, $5{,}000$ test, $2{,}000$ validation, and \code{n} labelled training images drawn from the rest, $n/10$ per class; \code{train(config)} has the same interface and result format as before. Run \code{python eurosat\_lab.py --download} once, at home, before you start ($140$ MB). Two ways to do the experiment; pick one, or do the first and then the second.
+
+\begin{center}\small
+\begin{tabular}{@{}L{7.7cm}L{7.7cm}@{}}
+\toprule
+\textbf{Option A: the four methods by key} & \textbf{Option B, the challenge: build the models yourself} \\
+\midrule
+\code{method} $\in\{$\code{"mlp"}, \code{"scratch"}, \code{"frozen"}, \code{"finetune"}$\}$: the session-2 MLP on the pixels; ResNet-18 from random initialization; the ImageNet-pretrained ResNet-18 as a frozen feature extractor with a new linear head; the same with every weight trained at a small learning rate. \code{epochs}, \code{lr}, \code{batch\_size} default to the method's own ($0$ = default: 40 / 30 / 100 / 15 epochs). &
+Pass your own network: \code{train(config, model=m)}; any \code{nn.Module} from a $(B,3,\code{size},\code{size})$ batch to 10 logits. Build the four yourself: the MLP; \code{resnet18(num\_classes=10)}; the pretrained one, \code{resnet18(weights=\allowbreak ResNet18\_Weights.\allowbreak IMAGENET1K\_V1)} with \code{m.fc = nn.Linear(512, 10)}, fine-tuned; and the same frozen. For the frozen one, do not run the backbone every epoch: set \code{backbone.fc = nn.Identity()}, compute \code{feats = extract\_features(backbone)} once ($27{,}000\times512$; $\approx8$ min on a CPU, cache it with \code{torch.save}), then \code{train(config, model=nn.Linear(512, 10), feats=feats)}. Details that bite: the input is already ImageNet-standardized and resized to \code{size}; the pretrained net wants \code{size} $=128$; a frozen backbone belongs in \code{eval()} mode; fine-tune with \code{lr} $\approx10^{-4}$, the head alone with $\approx10^{-2}$ and many epochs. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{rules}{Compute (Apple M5 CPU; an older laptop CPU is $2$--$3\times$ slower)}
+\code{frozen}: the features are computed once for every image used and cached, $\approx40$\,s for $n=300$ with the test set, then the head trains in seconds. \code{mlp}: seconds. \code{finetune} and \code{scratch}: $\approx16$\,s per epoch at $n=300$ (most of it the validation pass), $\approx30$\,s at $n=1000$; so $15$ epochs of fine-tuning take $4$--$8$ minutes and $30$ epochs from scratch $8$--$15$. On a GPU all of it is minutes. If short of time: all four methods at $n=300$, then \code{frozen} at every $n$.
+\end{rules}
+
+\begin{experiment}{Transfer learning on EuroSAT (homework)}{$\sim$30 min on a CPU}
+\run{\code{n} $\in\{100, 300, 1000\}$, the four methods (option A or B), the method's default epochs; \code{test} $=$ \code{true} on every run (each run is one experiment; the test set is not used to choose anything here).}
+\collect{test accuracy vs.\ $n$ (log $x$), four curves on one axis; a table with \code{n\_params} (the trainable ones), \code{best\_epoch}, \code{sec\_per\_epoch}; for $n=1000$, the validation curves of the four methods.}
+\answer{Before running: at $n=100$ (10 images per class), which method wins, and by how much? At $n=1000$? Afterwards: the frozen backbone never saw a satellite image and only $5{,}130$ numbers were trained; what did ImageNet teach it that transfers? Does fine-tuning beat the frozen features at every $n$, and where does the gap open? Would you expect the same on data that are not photographs (spectra, time series)? One paragraph: how you would classify a new set of $200$ labelled microscope images tomorrow.}
+\end{experiment}
+
+\begin{experiment}{Depth with and without skips (homework)}{$\sim$7 min on a GPU; 5 epochs on a CPU}
+\run{\code{convs\_per\_block} $=4$ (twelve conv layers), \code{batchnorm} $=$ \code{false}, 10 epochs: once as is, once with \code{skip} $=$ \code{true} (the identity added around every conv, a $1\times1$ projection where the channel count changes). With a GPU: both again with \code{batchnorm} $=$ \code{true}.}
+\collect{training loss vs.\ epoch, the runs on one axis.}
+\heavy{$4\times$ the default cost per epoch ($14$--$29$\,s on an Apple GPU, $\approx80$\,s on an M5 CPU): $\approx3$ min per run on a GPU, $\approx7$ min at 5 epochs on a CPU. The two BatchNorm-on runs are the same again: GPU only.}
+\answer{Before running: sketch the two training curves; by how much will the skips help, if at all, at twelve layers? Afterwards: the gap in training loss at epoch 10, and in validation accuracy; is it a speed difference or a different endpoint? With BatchNorm on, how much of the gap closes? What do the skips change that BatchNorm does not (the week-2 depth frame: a product of factors vs.\ a sum)?}
 \end{experiment}
 
 \end{document}

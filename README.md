@@ -25,7 +25,7 @@ python mlp_lab.py --show-defaults   # the hyperparameters
 
 ## The labs
 
-The tasks are in `lab_mlp.pdf` (Part A the first task; Part B E0–E11 with `mlp_lab.py`; Part C E12–E15 with `mlp_lab2.py`) and `lab_cnn.pdf` (E16–E19 with `cnn_lab.py`). The last page of `lab_mlp.pdf` says what is done when.
+The tasks are in `lab_mlp.pdf` (Part A the first task; Part B E0–E11 with `mlp_lab.py`; Part C E12–E15 with `mlp_lab2.py`) and `lab_cnn.pdf` (E16–E20 and E22 with `cnn_lab.py`, E21 with `eurosat_lab.py`). Session 7 (autoencoders): E22–E25 with `ae_lab.py`, the tasks are on the lab frames of the deck until the sheet is out. The last page of `lab_mlp.pdf` says what is done when.
 
 The scripts give you a network and a training loop. You write the experiments around them, with whatever AI assistant you like. From Python, inside this folder:
 
@@ -42,7 +42,9 @@ Please do not edit the scripts. Everyone's numbers should be comparable across t
 
 **`mlp_lab2.py`** is `mlp_lab.py` with more knobs (`optimizer` sgd/adam/adamw, `momentum`, `nesterov`, `weight_decay`, `schedule` none/cosine/step, `warmup_epochs`, `init`, `batchnorm`, `augment`). Same defaults, so `train({})` reproduces E1 exactly; same result format plus an `lr` entry in `history`. Your E0 pipeline works unchanged after `from mlp_lab2 import train`.
 
-**`cnn_lab.py`** (imports `mlp_lab2.py`): same `train(config)` and result format, but the model is a small CNN (`channels`, `convs_per_block`, `kernel`, `batchnorm`; `channels=[]` gives back the MLP), plus `shuffle_pixels` for E16. Defaults are the E15 recipe (AdamW, cosine, augmentation) and `device="auto"`: a GPU or an Apple GPU when there is one. On a CPU, run 5 epochs instead of 10.
+**`cnn_lab.py`** (imports `mlp_lab2.py`): same `train(config)` and result format, but the model is a small CNN (`channels`, `convs_per_block`, `kernel`, `batchnorm`, `skip` for E22; `channels=[]` gives back the MLP), plus `shuffle_pixels` for E16, `classes`, `n_per_class`, `save_weights`, `init_from`, `freeze` and the helper `nearest_mean(weights, classes, n_per_class)` for E20 (transfer within CIFAR-10, Thursday in class; E19 is homework); the result also holds the trained network, `result["model"]`. Defaults are the E15 recipe (AdamW, cosine, augmentation) and `device="auto"`: a GPU or an Apple GPU when there is one. On a CPU, run 5 epochs instead of 10.
+
+**`eurosat_lab.py`** (E21, homework): transfer learning on EuroSAT, 27,000 satellite patches in 10 land-use classes. Same `train(config)` and result format; keys `method` (`mlp`, `scratch`, `frozen`, `finetune`), `n` (labelled training images), `epochs`, `lr`, `size`; or build the model yourself and pass `train(config, model=m)`, with `extract_features(backbone)` for a frozen backbone (the sheet's option B). Run `python eurosat_lab.py --download` once at home (EuroSAT 94 MB, ResNet-18 weights 45 MB). Frozen features are cached in `data/` after the first run.
 
 ```python
 from mlp_lab2 import train
