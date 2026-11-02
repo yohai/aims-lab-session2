@@ -1,0 +1,132 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,booktabs,array,enumitem,xcolor,tcolorbox}
+\usepackage[colorlinks=true,urlcolor=blue!50!black,linkcolor=blue!50!black]{hyperref}
+\usepackage{fancyhdr}
+\definecolor{aiblue}{HTML}{1B3B6F}
+\pagestyle{fancy}\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\lhead{\small\textcolor{gray}{AI Methods for Science (77222)}}
+\rhead{\small\textcolor{gray}{The autoencoder lab: E22--E25}}
+\cfoot{\thepage}
+\setlist{nosep,leftmargin=1.4em}
+\setlength{\parindent}{0pt}\setlength{\parskip}{4pt}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newtcolorbox{rules}[1]{colback=aiblue!5,colframe=aiblue!70!black,boxrule=0.6pt,arc=1mm,
+  left=6pt,right=6pt,top=4pt,bottom=4pt,title={#1},fonttitle=\bfseries\small}
+\newcounter{exp}
+\newenvironment{experiment}[2]{\refstepcounter{exp}\par\medskip
+  \textbf{\textcolor{aiblue}{E\theexp.\ #1}}\hfill{\small\textcolor{gray}{#2}}\par}{\par}
+\newcommand{\run}[1]{\textbf{Run.} #1\par}
+\newcommand{\collect}[1]{\textbf{Collect.} #1\par}
+\newcommand{\answer}[1]{\textbf{Answer.} #1\par}
+\newcommand{\heavy}[1]{\textcolor{gray!70!black}{\textbf{Compute.} #1}\par}
+
+\begin{document}
+\sloppy
+\begin{center}
+{\Large\bfseries The autoencoder lab: the same loop, no labels}\\[3pt]
+AI Methods for Science (77222) \quad·\quad Part I, week 4; continues \code{lab\_cnn.pdf}
+\end{center}
+
+\section*{The setup}
+\code{ae\_lab.py} (from \url{https://github.com/yohai/aims-lab-session2}; next to \code{mlp\_lab2.py}, which it imports) has the same \code{train(config)} interface as \code{cnn\_lab.py}; the result has \code{"config"}, \code{"history"}, \code{"summary"} and \code{"model"}. The target is the input itself. The network is a convolutional encoder (three stride-2 conv blocks, $32\to16\to8\to4$ pixels, then a linear layer to $d$ numbers, the latent vector) and the mirror-image decoder (a linear layer, then transposed convs back to $3\times32\times32$). The loss is the mean squared error per pixel between the image and its reconstruction, pixels in $[0,1]$. The summary reports \code{val\_mse} (best epoch), \code{train\_mse}, \code{n\_params}, \code{sec\_per\_epoch}. The keys:
+\begin{center}\small
+\begin{tabular}{@{}L{3.9cm}L{2.9cm}L{9.4cm}@{}}
+\toprule
+key & default & meaning \\
+\midrule
+\code{latent} & \code{32} & the size $d$ of the bottleneck: $3072$ numbers go in, $d$ come out of the encoder \\
+\code{channels} & \code{[32, 64, 128]} & channels of the three encoder blocks; the decoder mirrors them \\
+\code{noise} & \code{0} & standard deviation of Gaussian noise added to the \emph{input} during training; the target stays clean (E25) \\
+\code{exclude\_class} & \code{-1} & a class $0..9$ removed from the training and validation sets; $-1$ for none (E24) \\
+\code{optimizer}, \code{lr}, \code{weight\_decay}, \code{schedule}, \dots & AdamW, $10^{-3}$, $0.05$, cosine & as in \code{mlp\_lab2.py} \\
+\code{epochs} & \code{10} & \\
+\code{device} & \code{"auto"} & GPU (\code{cuda}) or Apple GPU (\code{mps}) if present, else CPU \\
+\bottomrule
+\end{tabular}
+\end{center}
+The helpers, all on the validation split unless they take images:
+\begin{center}\small
+\begin{tabular}{@{}L{5.6cm}L{10.6cm}@{}}
+\toprule
+call & returns \\
+\midrule
+\code{load\_pixels()} & \code{x\_tr, y\_tr, x\_va, y\_va}: images $(N,3,32,32)$ in $[0,1]$ and labels; $45{,}000$ / $5{,}000$ \\
+\code{reconstruct(r, x)}, \code{encode(r, x)} & $\hat{\mathbf x}$, same shape as \code{x}; the latent vectors, $(N,d)$ \\
+\code{score(r, x)} & the reconstruction error of each image, $\|\mathbf x-\hat{\mathbf x}\|^2/3072$, $(N,)$ \\
+\code{pca\_mse(d)}, \code{pca\_reconstruct(x, d)}, \code{pca\_scores(x, d)} & the same for PCA with $d$ components, fitted on the training images: validation MSE, reconstructions, the $d$ coordinates. No training; the first call takes $\approx5$\,s \\
+\code{anomaly\_scores(r)} & \code{score} of up to six sets, a dict: \code{"val"}, \code{"excluded"}, \code{"permuted"}, \code{"noise"}, \code{"constant"}, \code{"eurosat"} (E24) \\
+\code{auroc(normal, anomalous)}, \code{roc\_curve(normal, anomalous)} & the area under the ROC curve; the false-alarm and detection rates for a plot \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{rules}{Compute}
+Default network, 352 steps per epoch: $\approx4$\,s per epoch on an Apple M-series GPU, $\approx35$\,s on an M5 CPU, about twice that on an older laptop CPU; $d$ barely changes the cost. \textbf{On a CPU, run 5 epochs instead of 10 and say so.} E23 and E25 reuse the networks of E22: keep the results in memory (a notebook), or save each with \code{torch.save(r, "ae\_d32.pt")} and load it with \code{torch.load("ae\_d32.pt", weights\_only=False)}. Rules as before: do not edit the script; predict before each run, in writing.
+\end{rules}
+
+\section*{No report}
+Nothing from this sheet is submitted. E22--E24 are done in class, E25 is optional. The Collect and Answer lines say what to look at and what to decide, as before; so does the rule: predict, in writing, before each run.
+
+\section*{The experiments}
+\setcounter{exp}{21}
+
+\begin{experiment}{How small can the bottleneck be?}{$\sim$3 min on a GPU}
+\run{\code{latent} $\in\{8, 32, 128, 512\}$, 10 epochs each; \code{pca\_mse(d)} for the same $d$, and for as many other $d$ as you like (it costs nothing).}
+\collect{validation MSE vs.\ $d$, the network and PCA on one log--log axis; a table with \code{n\_params}, \code{val\_mse}, \code{train\_mse}, \code{sec\_per\_epoch}; one figure of 8 validation images: the originals, then a row of reconstructions for each $d$, network and PCA (\code{reconstruct}, \code{pca\_reconstruct}).}
+\heavy{four runs of 10 epochs: $\approx3$ min on an Apple GPU; on an M5 CPU, 5 epochs each, $\approx12$ min.}
+\answer{Before running: sketch the two curves. Afterwards: PCA is the best \emph{linear} encoder--decoder pair there is. Does the network beat it, and at which $d$? What could a nonlinear network represent that PCA cannot, and does the MSE show it? What is the smallest $d$ at which you can still name the class from the reconstruction? Why are the reconstructions blurred rather than wrong in some other way?}
+\end{experiment}
+
+\begin{experiment}{Is the latent vector good for anything else?}{$\sim$3 min}
+The encoder was trained to reconstruct, nothing else. Freeze it and ask a different question of its output: can a linear classifier, trained on the $d$ latent numbers of each training image, name the class? To know whether the answer is any good, run the same classifier on two other descriptions of the image that involve no network at all: the $3072$ raw pixels, and the $d$ PCA coordinates.
+
+There is no helper for this one; the classifier is yours to build. It is multinomial logistic regression: one \code{nn.Linear(k, 10)} from the $k$ features to 10 logits, cross-entropy loss, trained on the features of the $45{,}000$ training images, evaluated as accuracy on the $5{,}000$ validation images. Two details that matter: standardize each feature with the mean and standard deviation of the training set before training, otherwise the scales of the latent numbers set the learning rate for you; and the whole feature matrix fits in memory, so there is no need for minibatches: a few hundred steps of full-batch Adam at \code{lr=1e-2} on the whole $45{,}000\times k$ matrix are enough. Check that the classifier is converged, i.e.\ that more steps do not change the validation accuracy.
+
+\run{the classifier on three kinds of features, \code{x\_tr, y\_tr, x\_va, y\_va = load\_pixels()}:
+\begin{itemize}
+  \item the network: \code{encode(r, x\_tr)} and \code{encode(r, x\_va)} for each of the four networks of E22 ($d=8,32,128,512$);
+  \item PCA: \code{pca\_scores(x\_tr, d)} and \code{pca\_scores(x\_va, d)} for the same four $d$;
+  \item the pixels: \code{x\_tr.reshape(len(x\_tr), -1)} and the same for \code{x\_va}, once.
+\end{itemize}}
+\collect{classifier accuracy vs.\ $d$: the network and PCA as two curves, the pixels as a horizontal line; two more horizontal lines for reference, the MLP on pixels of \code{lab\_mlp.pdf} ($53\%$) and the supervised CNN of E16 ($71\%$).}
+\heavy{seconds per classifier on a GPU; on a CPU $\approx10$\,s for the pixels and $\approx20$\,s per network, most of it encoding the $45{,}000$ images.}
+\answer{Before running: the order of pixels, PCA and the network at each $d$. Afterwards: labels enter here for the first time, and only in the linear classifier. Can a classifier on PCA coordinates ever beat the classifier on the pixels? Why? Network minus pixels is what the structure of $\mathbf x$ alone buys; CNN minus network is what the labels buy. Does the ranking on classifier accuracy agree with the ranking on MSE in E22?}
+\end{experiment}
+
+\begin{experiment}{Hold out a class, then score everything}{$\sim$3 min on a GPU}
+The idea: train the autoencoder on nine of the ten classes, so that the tenth is something it has never seen. Then feed it images of several kinds and use the reconstruction error of each image, $s(\mathbf x)=\|\mathbf x-\hat{\mathbf x}\|^2$, as an anomaly score: the hypothesis is that what the network has never seen it cannot reconstruct, so $s$ should be high on the held-out class and on anything else that is not a natural image. \code{anomaly\_scores(r)} computes $s$ for six sets of images and returns a dict with one array of scores per set:
+\begin{itemize}
+  \item \code{"val"}: validation images of the nine training classes. These are the normal data; every other set is compared against them.
+  \item \code{"excluded"}: $1000$ images of the held-out class, which the network never saw.
+  \item \code{"permuted"}: validation images with their pixels shuffled, the same fixed permutation for every image (E16's trick). The same pixel values, no spatial structure.
+  \item \code{"noise"}: images of uniform random noise.
+  \item \code{"constant"}: images of a single colour, one random colour per image.
+  \item \code{"eurosat"}: satellite patches from E21, resized to $32\times32$. Natural images, but not of the kind the network trained on. Present only if \code{data/eurosat\_uint8.pt} exists, i.e.\ if you ran \code{python eurosat\_lab.py --download}.
+\end{itemize}
+A detector is judged by \code{auroc(normal, anomalous)}: the probability that a random image of the anomalous set scores higher than a random normal image. $1$ is a perfect separation, $0.5$ is chance, and \emph{below} $0.5$ means the anomalous images reconstruct better than the normal ones.
+
+\run{three networks, 10 epochs each:
+\begin{itemize}
+  \item \code{train(\{"latent": 32, "epochs": 10, "exclude\_class": 6\})}: frog held out, a class that looks unlike the other nine;
+  \item \code{train(\{"latent": 32, "epochs": 10, "exclude\_class": 9\})}: truck held out, a class that looks much like one that stays in (car);
+  \item \code{train(\{"latent": 512, "epochs": 10, "exclude\_class": 6\})}: frog again, with a bottleneck $16\times$ wider.
+\end{itemize}
+For each network, \code{s = anomaly\_scores(r)}, then \code{auroc(s["val"], s[k])} for every key \code{k} other than \code{"val"}.}
+\collect{for the first network, a histogram of $\log s$ for each of the six sets, all on one axis; the ROC curve of the held-out frogs against \code{"val"} (\code{fpr, tpr = roc\_curve(s["val"], s["excluded"])}); a table of AUROC, one row per set, one column per network.}
+\heavy{the nine-class training set is 10\% smaller, so slightly under the default cost: three runs of 10 epochs, $\approx2$ min on an Apple GPU; on an M5 CPU, 5 epochs each, $\approx8$ min. Scoring: seconds.}
+\answer{Before running: write down the order in which you expect the six sets to score, highest first (you did this in class; it is the hypothesis). Afterwards, for the first network: which sets does the score separate from the normal data (AUROC near $1$), and which does it not? Which sets come out \emph{below} $0.5$, and what do these images have in common that makes them easy to reconstruct? Is a held-out frog an anomaly to this network at all? Frog against truck: is the confusable class harder to detect, and by how much? The wide bottleneck: a better reconstruction of the normal data, but does it make a better detector, or does it reconstruct the anomalies better too? In one sentence: what does this detector detect?}
+\end{experiment}
+
+\begin{experiment}{A target the input does not contain (optional)}{$\sim$1 min on a GPU}
+\run{\code{dn = train(\{"latent": 512, "epochs": 10, "noise": 0.2\})}: noisy images in, clean images as the target. Compare with the plain $d=512$ network of E22. Make noisy validation images the same way, \code{xn = x\_va + 0.2 * torch.randn\_like(x\_va)}, and feed them to both.}
+\collect{one figure of 8 images: clean, noisy, the plain network on the noisy image, the denoiser on the noisy image; a table of the MSE to the \emph{clean} image of the noisy input, the plain network's output and the denoiser's output; E23's classifier on the latent vectors of both networks.}
+\heavy{one run of 10 epochs: $\approx45$\,s on an Apple GPU, $\approx6$ min on an M5 CPU (or 5 epochs, $3$ min).}
+\answer{Before running: does the plain network, which never saw a noisy image, remove any of the noise? By how much does the denoiser do better? Whose latent vector classifies better? Afterwards: what does the denoiser have to know about images to do its job that the plain network does not? Where in the plain network does the noise go?}
+\end{experiment}
+
+\end{document}
