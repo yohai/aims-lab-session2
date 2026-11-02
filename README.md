@@ -25,7 +25,7 @@ python mlp_lab.py --show-defaults   # the hyperparameters
 
 ## The labs
 
-The tasks are in `lab_mlp.pdf` (Part A the first task; Part B E0–E11 with `mlp_lab.py`; Part C E12–E15 with `mlp_lab2.py`) and `lab_cnn.pdf` (E16–E20 and E22 with `cnn_lab.py`, E21 with `eurosat_lab.py`). `lab_ae.pdf` (E22–E25 with `ae_lab.py`; nothing from it is submitted). Session 8 (VAEs): E26–E28 with `vae_lab.py`, the tasks are on the lab frames of the deck until the sheet is out. The last page of `lab_mlp.pdf` says what is done when.
+The tasks are in `lab_mlp.pdf` (Part A the first task; Part B E0–E11 with `mlp_lab.py`; Part C E12–E15 with `mlp_lab2.py`) and `lab_cnn.pdf` (E16–E20 and E22 with `cnn_lab.py`, E21 with `eurosat_lab.py`). `lab_ae.pdf` (E22–E25 with `ae_lab.py`; nothing from it is submitted). The last page of `lab_mlp.pdf` says what is done when.
 
 The scripts give you a network and a training loop. You write the experiments around them, with whatever AI assistant you like. From Python, inside this folder:
 
