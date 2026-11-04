@@ -1,0 +1,78 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,booktabs,array,enumitem,xcolor,tcolorbox,listings}
+\usepackage[colorlinks=true,urlcolor=blue!50!black,linkcolor=blue!50!black]{hyperref}
+\usepackage{fancyhdr}
+\definecolor{aiblue}{HTML}{1B3B6F}
+\pagestyle{fancy}\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\lhead{\small\textcolor{gray}{AI Methods for Science (77222)}}
+\rhead{\small\textcolor{gray}{Optimize the input: E26--E29}}
+\cfoot{\thepage}
+\setlist{nosep,leftmargin=1.4em}
+\setlength{\parindent}{0pt}\setlength{\parskip}{4pt}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+\lstset{language=Python,basicstyle=\ttfamily\small,keywordstyle=\color{aiblue}\bfseries,commentstyle=\color{gray},stringstyle=\color{teal},showstringspaces=false,columns=fullflexible,backgroundcolor=\color{gray!8},frame=single,rulecolor=\color{gray!40},xleftmargin=4pt,framexleftmargin=4pt}
+\newtcolorbox{rules}[1]{colback=aiblue!5,colframe=aiblue!70!black,boxrule=0.6pt,arc=1mm,
+  left=6pt,right=6pt,top=4pt,bottom=4pt,title={#1},fonttitle=\bfseries\small}
+\newcounter{exp}
+\newenvironment{experiment}[2]{\refstepcounter{exp}\par\medskip
+  \textbf{\textcolor{aiblue}{E\theexp.\ #1}}\hfill{\small\textcolor{gray}{#2}}\par}{\par}
+\newcommand{\qn}[1]{\textbf{The question.} #1\par}
+\newcommand{\expt}[1]{\textbf{The experiment.} #1\par}
+\newcommand{\fig}[1]{\textbf{The figure.} #1\par}
+\newcommand{\disc}[1]{\textbf{To discuss.} #1\par}
+
+\begin{document}
+\sloppy
+\begin{center}
+{\Large\bfseries Optimize the input, not the weights}\\[3pt]
+AI Methods for Science (77222) \quad·\quad Part I, week 4, Thursday; continues \code{lab\_cnn.pdf}
+\end{center}
+
+\section*{The setup}
+Every gradient so far was $\partial L/\partial\theta$. Today the weights stay fixed and the gradient is taken with respect to the \emph{pixels}: $\partial(\text{anything the net computes})/\partial\mathbf x$. In PyTorch that is one line, \code{x.requires\_grad\_(True)} before the forward pass; after \code{.backward()} the gradient is in \code{x.grad}. There is no new script for this lab. You write the few lines yourself, with your AI assistant, around a network you already have.
+
+\textbf{The network.} Any CNN trained with \code{cnn\_lab.py}: \code{r = train(config)} returns it as \code{r["model"]}, in eval mode, on the CPU, the network of the best epoch. Train one at the start of the lab (the default recipe, 5 epochs on a CPU, or your E18 configuration), or reuse one you saved: \code{train(\{..., "save\_weights": "cnn.pt"\})} writes the weights and the architecture keys, \code{torch.load("cnn.pt")} reads them back, and \code{build\_cnn(cfg)} from \code{cnn\_lab.py} makes an empty net of the same shape to \code{load\_state\_dict} into. E28 needs a \emph{second} net: the same call with another \code{"seed"} (and, if you like, a third with \code{"convs\_per\_block": 2}). Start those runs at the beginning of the lab, so they are ready when you get there.
+
+\textbf{The images.} \code{load\_cifar10()} from \code{mlp\_lab2.py} gives the train, validation and test sets as tensors that are already standardized per channel with \code{MEAN} and \code{STD} (also in \code{mlp\_lab2.py}); the network expects that input. It is easier to think in pixel units, so undo the standardization once, \code{x01 = x * STD[:, None, None] + MEAN[:, None, None]} (values in $[0,1]$), work on \code{x01}, and wrap the net so that it re-standardizes inside. Then ``$\epsilon$'' below means a fraction of the full range: $\epsilon = 4/255$ is four grey levels per pixel, and clipping to $[0,1]$ keeps the result a valid image.
+
+\begin{rules}{Compute, and the rules}
+Nothing here trains, except the network itself. One gradient with respect to a batch of 500 images is a fraction of a second; ten of them, seconds; the whole lab is minutes of compute on a laptop CPU. Do not edit \code{cnn\_lab.py}. Nothing from this sheet is submitted: bring one figure that surprised you to the workshop on Monday.
+\end{rules}
+
+\section*{The experiments}
+\setcounter{exp}{25}
+
+\begin{experiment}{Where does it look?}{$\sim$15 min}
+\qn{The net says ``horse'' with $97\%$. Which pixels is that answer made of? Does it look where you would, and, when it is wrong, what did it look at instead?}
+\expt{Two maps of the same thing. \emph{Saliency}: the absolute value of the gradient of the predicted logit with respect to each pixel, maximum over the three colours, one $32\times32$ map per image. \emph{Occlusion}: no gradient; cover an $8\times8$ square with grey, record the probability of the predicted class, slide the square over the image with a stride of 2 and record the probability at each position, a $13\times13$ map. Do both for eight validation images: four the net gets right with high confidence, four it gets wrong.}
+\fig{three rows of eight: the images with the predicted label and its probability, the saliency maps, the occlusion maps (dark where the hidden patch hurt).}
+\disc{Do the two maps agree? For the wrong answers, what was the net looking at? What does the raw gradient show that occlusion does not, and the reverse?}
+\end{experiment}
+
+\begin{experiment}{Fool it}{$\sim$25 min}
+\qn{How far do the pixels have to move before the class flips? Can you see the change? Does the direction matter, or would any change of that size do?}
+\expt{One step: $\mathbf x' = \mathbf x + \epsilon\,\mathrm{sign}(\nabla_{\mathbf x} L)$, where $L$ is the cross-entropy of the true label, then clip to $[0,1]$. Ten steps: repeat with a step of $\epsilon/4$, and after each step clip $\mathbf x'-\mathbf x$ back into $[-\epsilon,\epsilon]$ and $\mathbf x'$ into $[0,1]$. The control: the same $\epsilon$ with random signs instead of the gradient's. Run all three on 500 validation images for $\epsilon\in\{1,2,4,8\}/255$ and record the accuracy. Then the targeted version: replace $L$ by the cross-entropy of a class of your choice and \emph{descend} instead of ascending; at $\epsilon=4/255$, what fraction of the 500 becomes that class?}
+\fig{accuracy against $\epsilon$ (in grey levels) for the three perturbations on one axis; and, for eight images at the $\epsilon$ where most of them flip, three rows: the image with its label and probability, the perturbation stretched to full contrast, the perturbed image with its new label and probability.}
+\disc{At what $\epsilon$ does the net lose half of its accuracy, and is the perturbation visible there? Why does random noise of the same size do so little? (How much does a linear function $\mathbf w\cdot\mathbf x$ change under $3072$ random signs of size $\epsilon$, and under $3072$ aligned ones?) Which target class is easiest to reach, which hardest, and does that match the confusions of E16?}
+\end{experiment}
+
+\begin{experiment}{Does it transfer?}{$\sim$10 min}
+\qn{The perturbation was computed from one net's gradient. Does it fool a net that never saw it?}
+\expt{Take the ten-step perturbations at $\epsilon=4/255$ from E27, made against your first net. Evaluate the same perturbed images on the second net, the one trained with another seed (and on the bigger one, if you trained it). Then the reverse: attack the second net, test on the first.}
+\fig{a table: for each net, accuracy on the clean images, on the images attacked against itself, and on the images attacked against the other net. Optionally a curve over $\epsilon$.}
+\disc{The two nets differ only in the random seed. If an attack computed on A fools B, what do A and B have in common that neither was trained to have? Does a bigger net resist A's attack better, and does it resist its own?}
+\end{experiment}
+
+\begin{experiment}{A cheap defence}{$\sim$10 min}
+\qn{The perturbation is high-frequency. If we blur the image before the net sees it, is the attack gone? And what happens once the attacker knows about the blur?}
+\expt{Blur: a $3\times3$ kernel $[1,2,1]\otimes[1,2,1]/16$ applied to each colour channel (one \code{conv2d} with \code{groups=3} and reflect padding), or any blur you like. Evaluate the net on the attacked images from E27 after blurring them, and on the clean images after blurring them, at $\epsilon\in\{2,4,8\}/255$. Then put the blur \emph{inside} the attacked function (the net sees \code{blur(x)}) and rerun the ten-step attack through it.}
+\fig{a table: clean, attacked, attacked then blurred, attacked through the blur, at each $\epsilon$; and for four images the triple: attacked, blurred, with the label and probability under each.}
+\disc{How much accuracy does the blur give back, and what does it cost on clean images? Once the attacker can differentiate through the defence, is anything left of it?}
+\end{experiment}
+
+\end{document}
